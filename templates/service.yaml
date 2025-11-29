@@ -1,0 +1,22 @@
+{{- $defaultServicePorts := list (dict "name" "http" "port" 80 "protocol" "TCP") -}}
+{{- $servicePorts := default $defaultServicePorts .Values.service.ports -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "application.fullname" . }}
+  labels:
+    {{- include "application.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    {{- range $port := $servicePorts }}
+    - name: {{ default (printf "port-%v" (default 80 $port.port)) $port.name }}
+      protocol: {{ default "TCP" $port.protocol }}
+      port: {{ default 80 $port.port }}
+      targetPort: {{ coalesce $port.targetPort $.Values.container.port.name $.Values.container.port.number (default 80 $port.port) }}
+      {{- with $port.nodePort }}
+      nodePort: {{ . }}
+      {{- end }}
+    {{- end }}
+  selector:
+    {{- include "application.selectorLabels" . | nindent 4 }}

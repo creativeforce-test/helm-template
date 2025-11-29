@@ -1,0 +1,125 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "application.fullname" . }}
+  labels:
+    {{- include "application.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "application.selectorLabels" . | nindent 6 }}
+{{- if .Values.storage }}
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ include "application.fullname" . }}-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: {{ .Values.storageClassName }}
+      resources:
+        requests:
+          storage: {{ .Values.storageSize  }}
+{{- end }}
+  template:
+    metadata:
+      {{- $podAnnotations := .Values.podAnnotations }}
+      {{- $configMapEnabled := .Values.configMap.enabled }}
+      {{- $secretsEnabled := .Values.secrets.enabled }}
+      {{- if or $configMapEnabled $secretsEnabled (not (empty $podAnnotations)) }}
+      annotations:
+        {{- if $configMapEnabled }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if $secretsEnabled }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with $podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      labels:
+        {{- include "application.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "application.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.secrets.enabled }}
+          envFrom:
+            - secretRef:
+                name: {{ include "application.fullname" . }}-secrets
+          {{- end }}
+          {{- if .Values.configMap.enabled }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "application.fullname" . }}-config
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.container.port.number | default 80 }}
+              protocol: TCP
+          {{- if or (not (hasKey .Values.container.healthCheck "enabled")) .Values.container.healthCheck.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.container.healthCheck.livenessProbe.path | default "/" }}
+              port: {{ .Values.container.healthCheck.livenessProbe.port | default "http" }}
+            {{- with .Values.container.healthCheck.livenessProbe.initialDelaySeconds }}
+            initialDelaySeconds: {{ . }}
+            {{- end }}
+            {{- with .Values.container.healthCheck.livenessProbe.periodSeconds }}
+            periodSeconds: {{ . }}
+            {{- end }}
+            {{- with .Values.container.healthCheck.livenessProbe.timeoutSeconds }}
+            timeoutSeconds: {{ . }}
+            {{- end }}
+            {{- with .Values.container.healthCheck.livenessProbe.successThreshold }}
+            successThreshold: {{ . }}
+            {{- end }}
+            {{- with .Values.container.healthCheck.livenessProbe.failureThreshold }}
+            failureThreshold: {{ . }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.container.healthCheck.readinessProbe.path | default "/" }}
+              port: {{ .Values.container.healthCheck.readinessProbe.port | default "http" }}
+            {{- with .Values.container.healthCheck.readinessProbe.initialDelaySeconds }}
+            initialDelaySeconds: {{ . }}
+            {{- end }}
+            {{- with .Values.container.healthCheck.readinessProbe.periodSeconds }}
+            periodSeconds: {{ . }}
+            {{- end }}
+            {{- with .Values.container.healthCheck.readinessProbe.timeoutSeconds }}
+            timeoutSeconds: {{ . }}
+            {{- end }}
+            {{- with .Values.container.healthCheck.readinessProbe.successThreshold }}
+            successThreshold: {{ . }}
+            {{- end }}
+            {{- with .Values.container.healthCheck.readinessProbe.failureThreshold }}
+            failureThreshold: {{ . }}
+            {{- end }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
