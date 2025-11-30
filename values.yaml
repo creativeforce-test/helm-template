@@ -69,7 +69,45 @@ autoscaling:
   minReplicas: 1
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Pod Disruption Budget for high availability
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  # maxUnavailable: 1
+
+# Network Policy for zero-trust networking
+networkPolicy:
+  enabled: false
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress: []
+  # Example:
+  # - from:
+  #   - namespaceSelector:
+  #       matchLabels:
+  #         name: ingress-nginx
+  #   ports:
+  #   - protocol: TCP
+  #     port: 80
+  egress: []
+  # Example:
+  # - to:
+  #   - namespaceSelector:
+  #       matchLabels:
+  #         name: kube-system
+  #   ports:
+  #   - protocol: UDP
+  #     port: 53
+
+# Environment variables (plain text)
+# Example:
+# env:
+#   DATABASE_URL: "postgresql://localhost:5432/mydb"
+#   METRICS_URL: "http://prometheus:9091"
+env: {}
 
 nodeSelector: {}
 
