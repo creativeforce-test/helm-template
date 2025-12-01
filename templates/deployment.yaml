@@ -84,6 +84,9 @@ spec:
             httpGet:
               path: {{ .Values.container.healthCheck.livenessProbe.path | default "/" }}
               port: {{ .Values.container.healthCheck.livenessProbe.port | default "http" }}
+              {{- with .Values.container.healthCheck.livenessProbe.scheme }}
+              scheme: {{ . }}
+              {{- end }}
             {{- with .Values.container.healthCheck.livenessProbe.initialDelaySeconds }}
             initialDelaySeconds: {{ . }}
             {{- end }}
@@ -103,6 +106,9 @@ spec:
             httpGet:
               path: {{ .Values.container.healthCheck.readinessProbe.path | default "/" }}
               port: {{ .Values.container.healthCheck.readinessProbe.port | default "http" }}
+              {{- with .Values.container.healthCheck.readinessProbe.scheme }}
+              scheme: {{ . }}
+              {{- end }}
             {{- with .Values.container.healthCheck.readinessProbe.initialDelaySeconds }}
             initialDelaySeconds: {{ . }}
             {{- end }}
